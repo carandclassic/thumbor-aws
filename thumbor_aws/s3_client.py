@@ -8,7 +8,9 @@
 # http://www.opensource.org/licenses/mit-license
 # Copyright (c) 2021 Bernardo Heynemann heynemann@gmail.com
 
+import asyncio
 import datetime
+from math import ceil
 from typing import Any, Dict, Mapping, Optional, Tuple
 
 from aiobotocore.client import AioBaseClient
@@ -19,6 +21,8 @@ from thumbor.utils import logger
 
 _default = object()
 
+MAX_CHUNKS=8
+MIN_CHUNK_SIZE=512*1024
 
 class S3Client:
     __session: AioSession = None
@@ -139,25 +143,59 @@ class S3Client:
     ) -> Tuple[int, bytes, bytes, Optional[datetime.datetime]]:
         """Gets an object's data from S3"""
         async with self.get_client() as client:
+            head = None
             try:
-                response = await client.get_object(Bucket=bucket, Key=path)
+                head = await client.head_object(Bucket=bucket, Key=path)
             except client.exceptions.NoSuchKey:
                 return 404, b"", None
+            except client.exceptions.ClientError as err:
+                # NOTE: This case is required because of https://github.com/boto/boto3/issues/2442
+                if err.response["Error"]["Code"] == "404":
+                    return 404, b"", None
+                raise
 
-            status_code = self.get_status_code(response)
-            if status_code != 200:
-                msg = f"Unable to upload image to {path}: Status Code {status_code}"
-                logger.error(msg)
-                return status_code, msg, None
-
-            last_modified = response["LastModified"]
+            content_length = head["ContentLength"]
+            last_modified = head["LastModified"]
+            status_code = self.get_status_code(head)
 
             if self._is_expired(last_modified, expiration):
                 return 410, b"", last_modified
 
-            body = await self.get_body(response)
+            # Download in chunks
+            chunks = MAX_CHUNKS
+            if content_length > MAX_CHUNKS * MIN_CHUNK_SIZE:
+                chunk_size = ceil(content_length / MAX_CHUNKS)
+            else:
+                chunks = ceil(content_length / MIN_CHUNK_SIZE)
+                chunk_size = ceil(content_length / chunks)
+
+            futures = []
+            start = 0
+            for c in range(chunks):
+                if c == chunks - 1:
+                    end = content_length - 1
+                else:
+                    end = start + chunk_size
+                futures.append(
+                    self.read_chunk(client, bucket, path, start, end)
+                )
+                start = end + 1
+
+            results = await asyncio.gather(*futures)
+            body = b''.join(results)
 
             return status_code, body, last_modified
+
+    async def read_chunk(self, client, bucket, key, start, end):
+        resp = await client.get_object(
+            Bucket=bucket,
+            Key=key,
+            Range=f"bytes={start}-{end}"
+        )
+
+        async with resp['Body'] as stream:
+            body = await stream.read()
+            return body
 
     async def object_exists(self, filepath: str):
         """Detects whether an object exists in S3"""
