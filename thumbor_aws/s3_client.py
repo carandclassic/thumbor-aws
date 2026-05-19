@@ -22,8 +22,9 @@ from thumbor.utils import logger
 
 _default = object()
 
-MAX_CHUNKS=8
-MIN_CHUNK_SIZE=512*1024
+MAX_CHUNKS = 8
+MIN_CHUNK_SIZE = 512 * 1024
+
 
 class S3Client:
     __session: AioSession = None
