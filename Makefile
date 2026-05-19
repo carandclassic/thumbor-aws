@@ -8,7 +8,7 @@ setup:
 	@poetry install
 
 services: docker-down
-	@docker-compose up
+	@docker compose up
 
 coverage:
 	@poetry run coverage report -m --fail-under=75
@@ -17,18 +17,18 @@ coverage:
 ci: unit coverage
 
 docker-up:
-	@docker-compose up -d
+	@docker compose up -d
 
 docker-down:
-	@docker-compose stop
-	@docker-compose rm -f
+	@docker compose stop
+	@docker compose rm -f
 
 test:
 	@$(MAKE) unit
 	@$(MAKE) flake
 
 unit:
-	@poetry run pytest --cov=thumbor_aws tests/
+	@poetry run pytest --cov=thumbor_aws -n auto tests/
 
 sequential-unit:
 	@poetry run pytest -sv --cov=thumbor_aws tests/

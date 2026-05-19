@@ -135,7 +135,7 @@ class Storage(BaseStorage, S3Client):
         )
 
     async def put(self, image_bytes: bytes) -> str:
-        file_abspath = normalize_path(self.prefix, self.context.request.url)
+        file_abspath = normalize_path(self.context, self.prefix, self.context.request.url)
         logger.debug("[RESULT_STORAGE] putting at %s", file_abspath)
         content_type = BaseEngine.get_mimetype(image_bytes)
         response = await self.upload(
@@ -161,11 +161,11 @@ class Storage(BaseStorage, S3Client):
 
     @property
     def prefix(self) -> str:
-        return ("auto_webp/" if self.is_auto_webp else "") + self.root_path
+        return self.root_path + ("/auto_webp" if self.is_auto_webp else "")
 
     async def get(self) -> ResultStorageResult:
         path = self.context.request.url
-        file_abspath = normalize_path(self.prefix, path)
+        file_abspath = normalize_path(self.context, self.prefix, path)
 
         logger.debug("[RESULT_STORAGE] getting from %s", file_abspath)
 
@@ -205,7 +205,7 @@ class Storage(BaseStorage, S3Client):
         self,
     ) -> datetime:
         path = self.context.request.url
-        file_abspath = normalize_path(self.prefix, path)
+        file_abspath = normalize_path(self.context, self.prefix, path)
         logger.debug("[RESULT_STORAGE] getting from %s", file_abspath)
 
         response = await self.get_object_metadata(file_abspath)
