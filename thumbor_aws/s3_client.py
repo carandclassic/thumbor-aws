@@ -196,7 +196,7 @@ class S3Client:
 
             return status_code, body, last_modified
 
-    async def read_chunk(self, client, bucket, key, start, end):
+    async def read_chunk(self, client, bucket, key, start, end): # pylint: disable=too-many-positional-arguments
         resp = await client.get_object(
             Bucket=bucket,
             Key=key,
