@@ -8,12 +8,19 @@ on:
   schedule:
     - cron: '* */6 * * *'
 
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   stale:
+    name: stale
     runs-on: ubuntu-latest
     permissions:
-      issues: write
-      pull-requests: write
+      issues: write # to label, comment on and close stale issues
+      pull-requests: write # to label, comment on and close stale PRs
     steps:
       - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9.1.0
         with:

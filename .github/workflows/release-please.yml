@@ -3,16 +3,22 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+permissions: {}
 
 name: release-please
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   release-please:
+    name: release-please
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # to push the release branch, tags and GitHub releases
+      issues: write # to create and apply release labels
+      pull-requests: write # to open and update the release PR
     steps:
       - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
         with:

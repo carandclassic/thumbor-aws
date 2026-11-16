@@ -9,14 +9,20 @@ on:
   schedule:
     - cron: '26 1 * * 6'
 
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
     permissions:
-      actions: read
-      contents: read
-      security-events: write
+      actions: read # for github/codeql-action/init to read workflow run details
+      contents: read # to fetch code (actions/checkout)
+      security-events: write # to upload CodeQL results
 
     strategy:
       fail-fast: false
@@ -25,6 +31,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      with:
+        persist-credentials: false
     - name: APT Update
       run: sudo apt-get update -y
     - name: APT Install
