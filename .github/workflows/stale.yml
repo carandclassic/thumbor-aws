@@ -8,14 +8,21 @@ on:
   schedule:
     - cron: '* */6 * * *'
 
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   stale:
+    name: stale
     runs-on: ubuntu-latest
     permissions:
-      issues: write
-      pull-requests: write
+      issues: write # to label, comment on and close stale issues
+      pull-requests: write # to label, comment on and close stale PRs
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9.1.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           stale-issue-message: 'This issue is stale because it has been open 30 days with no activity. Remove the stale label or add a comment, or this issue will be closed in 5 days. You can always re-open if you still feel this is still an issue. Tag @heynemann for more information.'
